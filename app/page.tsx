@@ -4,16 +4,23 @@ import { useState, useCallback, useEffect } from 'react';
 import type { Video, VideoCategory, EducationMeta } from '@/types/youtube';
 import { COUNTRIES, DEFAULT_CATEGORIES } from '@/lib/constants';
 import { videosToCSV } from '@/lib/youtube';
+import { useAuth } from '@/contexts/AuthContext';
 import ApiKeyManager from '@/components/ApiKeyManager';
 import VideoGrid from '@/components/VideoGrid';
 import RollingBanner from '@/components/RollingBanner';
 import VideoModal from '@/components/VideoModal';
 import EducationTab from '@/components/EducationTab';
 import AdsTab from '@/components/AdsTab';
+import UserMenu from '@/components/UserMenu';
+import AuthModal from '@/components/AuthModal';
+import SettingsModal from '@/components/SettingsModal';
 
 type Tab = 'trending' | 'education' | 'ads';
 
 export default function Home() {
+  const { settings, user, updateSettings } = useAuth();
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [apiKey, setApiKey] = useState('');
   const [regionCode, setRegionCode] = useState('KR');
   const [categoryId, setCategoryId] = useState('0');
@@ -45,9 +52,25 @@ export default function Home() {
     }
   }, []);
 
+  // Supabase 설정 로드 시 앱 상태 동기화
+  useEffect(() => {
+    if (settings?.youtube_api_key) {
+      setApiKey(settings.youtube_api_key);
+      localStorage.setItem('yt_api_key', settings.youtube_api_key);
+    }
+    if (settings?.default_region) setRegionCode(settings.default_region);
+    if (settings?.fetch_count) setFetchCount(settings.fetch_count);
+  }, [settings]);
+
   useEffect(() => {
     if (apiKey) loadCategories(apiKey, regionCode);
   }, [apiKey, regionCode, loadCategories]);
+
+  // API Key 변경 시 로그인 상태면 Supabase에도 저장
+  const handleApiKeyChange = useCallback((key: string) => {
+    setApiKey(key);
+    if (user && key) updateSettings({ youtube_api_key: key });
+  }, [user, updateSettings]);
 
   const fetchAds = useCallback(async (key: string, region: string) => {
     if (!key) return;
@@ -165,17 +188,23 @@ export default function Home() {
             </div>
           </div>
 
-          {lastFetched && (
-            <span className="ml-auto text-xs text-gray-600">
-              마지막 조회: {lastFetched}
-            </span>
-          )}
+          <div className="ml-auto flex items-center gap-3">
+            {lastFetched && (
+              <span className="text-xs text-gray-600 hidden sm:block">
+                마지막 조회: {lastFetched}
+              </span>
+            )}
+            <UserMenu
+              onOpenAuth={() => setShowAuthModal(true)}
+              onOpenSettings={() => setShowSettingsModal(true)}
+            />
+          </div>
         </div>
       </header>
 
       <main className="max-w-screen-2xl mx-auto px-4 py-6 space-y-5">
         {/* API Key */}
-        <ApiKeyManager onApiKeyChange={setApiKey} />
+        <ApiKeyManager onApiKeyChange={handleApiKeyChange} />
 
         {/* Rolling Banner — TOP 100 영상 롤링 */}
         <RollingBanner videos={trendingVideos} onVideoClick={setModalVideo} />
@@ -350,6 +379,13 @@ export default function Home() {
           video={modalVideo}
           apiKey={apiKey}
           onClose={() => setModalVideo(null)}
+        />
+      )}
+      {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} />}
+      {showSettingsModal && (
+        <SettingsModal
+          onClose={() => setShowSettingsModal(false)}
+          onApiKeyChange={handleApiKeyChange}
         />
       )}
     </div>
