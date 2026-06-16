@@ -1,5 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
+  "account_id": "4bf793d3a3b7ae7e5f80ee1a84a9189d",
   "main": ".open-next/worker.js",
   "name": "youtube-trend-analyzer",
   "compatibility_date": "2026-06-16",
