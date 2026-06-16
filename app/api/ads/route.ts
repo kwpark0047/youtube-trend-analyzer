@@ -1,5 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { searchVideosByKeyword, fetchVideosByIds } from '@/lib/youtube';
+import { validateApiKey, validateRegionCode, validateMaxResults } from '@/lib/errors';
+import { handleApiError } from '@/lib/api-errors';
 
 const AD_QUERIES: Record<string, string> = {
   KR: '광고 OR CF OR TVCF OR 광고영상',
@@ -14,22 +16,27 @@ const AD_QUERIES: Record<string, string> = {
 };
 
 export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url);
-  const apiKey = searchParams.get('apiKey');
-  const regionCode = searchParams.get('regionCode') || 'KR';
-  const maxResults = Math.min(parseInt(searchParams.get('maxResults') || '30'), 30);
-
-  if (!apiKey) {
-    return NextResponse.json({ error: 'API 키가 필요합니다.' }, { status: 400 });
-  }
-
-  const query = AD_QUERIES[regionCode] ?? AD_QUERIES.default;
-
   try {
-    const ids = await searchVideosByKeyword(apiKey, regionCode, query, maxResults, 'date');
+    const { searchParams } = new URL(request.url);
+    const apiKey = searchParams.get('apiKey');
+    const regionCode = searchParams.get('regionCode') || 'KR';
+    const maxResults = validateMaxResults(searchParams.get('maxResults'), 30);
+
+    validateApiKey(apiKey);
+
+    if (!validateRegionCode(regionCode)) {
+      return Response.json(
+        { error: '지원하지 않는 국가 코드입니다.' },
+        { status: 400 }
+      );
+    }
+
+    const query = AD_QUERIES[regionCode] ?? AD_QUERIES.default;
+
+    const ids = await searchVideosByKeyword(apiKey!, regionCode, query, maxResults, 'date');
 
     if (ids.length === 0) {
-      return NextResponse.json({
+      return Response.json({
         videos: [],
         total: 0,
         query,
@@ -38,15 +45,14 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const videos = await fetchVideosByIds(apiKey, ids);
+    const videos = await fetchVideosByIds(apiKey!, ids);
     const ranked = videos
       .sort((a, b) => new Date(b.snippet.publishedAt).getTime() - new Date(a.snippet.publishedAt).getTime())
       .slice(0, maxResults)
       .map((v, i) => ({ ...v, rank: i + 1 }));
 
-    return NextResponse.json({ videos: ranked, total: ranked.length, query, quota: 101 });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : '알 수 없는 오류';
-    return NextResponse.json({ error: message }, { status: 500 });
+    return Response.json({ videos: ranked, total: ranked.length, query, quota: 101 });
+  } catch (error) {
+    return handleApiError(error);
   }
 }

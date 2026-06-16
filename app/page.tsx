@@ -52,7 +52,6 @@ export default function Home() {
     }
   }, []);
 
-  // Supabase 설정 로드 시 앱 상태 동기화
   useEffect(() => {
     if (settings?.youtube_api_key) {
       setApiKey(settings.youtube_api_key);
@@ -66,7 +65,6 @@ export default function Home() {
     if (apiKey) loadCategories(apiKey, regionCode);
   }, [apiKey, regionCode, loadCategories]);
 
-  // API Key 변경 시 로그인 상태면 Supabase에도 저장
   const handleApiKeyChange = useCallback((key: string) => {
     setApiKey(key);
     if (user && key) updateSettings({ youtube_api_key: key });
@@ -130,7 +128,6 @@ export default function Home() {
       maxResults: String(fetchCount),
     });
 
-    // 급상승·교육·광고 병렬 조회
     const [trendResult] = await Promise.allSettled([
       fetch(`/api/trending?${trendingParams}`).then((r) => r.json()),
       fetchEducation(apiKey, regionCode),
@@ -173,24 +170,23 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-[#0a0a0a]">
-      {/* Header */}
       <header className="sticky top-0 z-40 bg-[#0a0a0a]/95 backdrop-blur border-b border-gray-800">
-        <div className="max-w-screen-2xl mx-auto px-4 py-3 flex items-center gap-3">
+        <div className="max-w-screen-2xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-red-600 rounded-lg flex items-center justify-center">
+            <div className="w-8 h-8 bg-red-600 rounded-lg flex items-center justify-center flex-shrink-0">
               <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z" />
               </svg>
             </div>
-            <div>
-              <h1 className="text-sm font-bold text-white leading-none">YouTube 트렌드 분석기</h1>
-              <p className="text-xs text-gray-500 leading-none mt-0.5">급상승 동영상 분석 도구</p>
+            <div className="min-w-0">
+              <h1 className="text-sm font-bold text-white leading-none truncate">YouTube 트렌드 분석기</h1>
+              <p className="text-xs text-gray-500 leading-none mt-0.5 hidden sm:block">급상승 동영상 분석 도구</p>
             </div>
           </div>
 
-          <div className="ml-auto flex items-center gap-3">
+          <div className="flex items-center gap-3">
             {lastFetched && (
-              <span className="text-xs text-gray-600 hidden sm:block">
+              <span className="text-xs text-gray-600 hidden md:block">
                 마지막 조회: {lastFetched}
               </span>
             )}
@@ -203,17 +199,13 @@ export default function Home() {
       </header>
 
       <main className="max-w-screen-2xl mx-auto px-4 py-6 space-y-5">
-        {/* API Key */}
         <ApiKeyManager onApiKeyChange={handleApiKeyChange} />
 
-        {/* Rolling Banner — TOP 100 영상 롤링 */}
         <RollingBanner videos={trendingVideos} onVideoClick={setModalVideo} />
 
-        {/* Controls */}
         <div className="bg-gray-900 border border-gray-700 rounded-xl p-4">
-          <div className="flex flex-wrap gap-3 items-end">
-            {/* Country */}
-            <div className="flex-1 min-w-[160px]">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="sm:col-span-2 lg:col-span-1">
               <label className="block text-xs text-gray-500 mb-1.5">국가</label>
               <select
                 value={regionCode}
@@ -228,8 +220,7 @@ export default function Home() {
               </select>
             </div>
 
-            {/* Category */}
-            <div className="flex-1 min-w-[200px]">
+            <div className="sm:col-span-2 lg:col-span-1">
               <label className="block text-xs text-gray-500 mb-1.5">카테고리 (급상승 필터)</label>
               <select
                 value={categoryId}
@@ -248,8 +239,7 @@ export default function Home() {
               </select>
             </div>
 
-            {/* Count */}
-            <div className="min-w-[120px]">
+            <div>
               <label className="block text-xs text-gray-500 mb-1.5">급상승 조회 수</label>
               <select
                 value={fetchCount}
@@ -262,29 +252,31 @@ export default function Home() {
               </select>
             </div>
 
-            {/* Fetch button */}
-            <button
-              onClick={fetchVideos}
-              disabled={loading || !apiKey}
-              className="flex items-center gap-2 px-6 py-2 bg-red-600 hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-medium text-sm rounded-lg transition-colors h-[38px]"
-            >
-              {loading ? (
-                <>
-                  <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                  </svg>
-                  조회 중...
-                </>
-              ) : (
-                <>
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                  조회
-                </>
-              )}
-            </button>
+            <div className="flex items-end">
+              <button
+                onClick={fetchVideos}
+                disabled={loading || !apiKey}
+                className="w-full flex items-center justify-center gap-2 px-6 py-2 bg-red-600 hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-medium text-sm rounded-lg transition-colors h-[38px]"
+              >
+                {loading ? (
+                  <>
+                    <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                    <span className="hidden sm:inline">조회 중...</span>
+                    <span className="sm:hidden">조회</span>
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                    조회
+                  </>
+                )}
+              </button>
+            </div>
           </div>
 
           {error && (
@@ -297,10 +289,9 @@ export default function Home() {
           )}
         </div>
 
-        {/* Tabs + Results */}
         <div>
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-1 bg-gray-900 border border-gray-800 rounded-xl p-1">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+            <div className="flex items-center gap-1 bg-gray-900 border border-gray-800 rounded-xl p-1 overflow-x-auto">
               <TabButton
                 active={activeTab === 'trending'}
                 onClick={() => setActiveTab('trending')}
@@ -408,14 +399,15 @@ function TabButton({
   return (
     <button
       onClick={onClick}
-      className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+      className={`flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${
         active
           ? 'bg-red-600 text-white shadow-lg'
           : 'text-gray-400 hover:text-gray-200'
       }`}
     >
       <span>{icon}</span>
-      <span>{label}</span>
+      <span className="hidden sm:inline">{label}</span>
+      <span className="sm:hidden">{label.split(' ')[0]}</span>
       {count > 0 && (
         <span
           className={`text-xs px-1.5 py-0.5 rounded-full ${

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import type { Video } from '@/types/youtube';
 import VideoCard from './VideoCard';
 import VideoModal from './VideoModal';
+import VideoSkeleton from './VideoSkeleton';
 
 interface Props {
   videos: Video[];
@@ -17,20 +18,7 @@ export default function VideoGrid({ videos, apiKey, loading, error, warning }: P
   const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
 
   if (loading) {
-    return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {Array.from({ length: 12 }).map((_, i) => (
-          <div key={i} className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden animate-pulse">
-            <div className="aspect-video bg-gray-800" />
-            <div className="p-3 space-y-2">
-              <div className="h-4 bg-gray-800 rounded w-full" />
-              <div className="h-3 bg-gray-800 rounded w-2/3" />
-              <div className="h-3 bg-gray-800 rounded w-1/2" />
-            </div>
-          </div>
-        ))}
-      </div>
-    );
+    return <VideoSkeleton count={12} columns={4} />;
   }
 
   if (error) {
