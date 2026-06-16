@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
       videos: eduVideos,
       total: eduVideos.length,
       strategy: 'filtered' as EducationStrategy,
-      strategyLabel: '전체 급상승 내 교육 필터',
+      strategyLabel: '전체 교육 TOP30 필터',
       quota: 2,
       warning:
         eduVideos.length === 0
