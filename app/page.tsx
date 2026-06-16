@@ -9,8 +9,9 @@ import VideoGrid from '@/components/VideoGrid';
 import RollingBanner from '@/components/RollingBanner';
 import VideoModal from '@/components/VideoModal';
 import EducationTab from '@/components/EducationTab';
+import AdsTab from '@/components/AdsTab';
 
-type Tab = 'trending' | 'education';
+type Tab = 'trending' | 'education' | 'ads';
 
 export default function Home() {
   const [apiKey, setApiKey] = useState('');
@@ -22,6 +23,10 @@ export default function Home() {
   const [educationVideos, setEducationVideos] = useState<Video[]>([]);
   const [educationMeta, setEducationMeta] = useState<EducationMeta | null>(null);
   const [loading, setLoading] = useState(false);
+  const [adsVideos, setAdsVideos] = useState<Video[]>([]);
+  const [adsQuota, setAdsQuota] = useState(0);
+  const [adsLoading, setAdsLoading] = useState(false);
+  const [adsError, setAdsError] = useState('');
   const [eduLoading, setEduLoading] = useState(false);
   const [error, setError] = useState('');
   const [educationError, setEducationError] = useState('');
@@ -43,6 +48,25 @@ export default function Home() {
   useEffect(() => {
     if (apiKey) loadCategories(apiKey, regionCode);
   }, [apiKey, regionCode, loadCategories]);
+
+  const fetchAds = useCallback(async (key: string, region: string) => {
+    if (!key) return;
+    setAdsLoading(true);
+    setAdsError('');
+    try {
+      const params = new URLSearchParams({ apiKey: key, regionCode: region, maxResults: '30' });
+      const res = await fetch(`/api/ads?${params}`);
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      setAdsVideos(data.videos || []);
+      setAdsQuota(data.quota || 0);
+    } catch (err) {
+      setAdsError(err instanceof Error ? err.message : '광고 영상 조회 실패');
+      setAdsVideos([]);
+    } finally {
+      setAdsLoading(false);
+    }
+  }, []);
 
   const fetchEducation = useCallback(async (key: string, region: string) => {
     if (!key) return;
@@ -83,10 +107,11 @@ export default function Home() {
       maxResults: String(fetchCount),
     });
 
-    // 급상승과 교육 병렬 조회
+    // 급상승·교육·광고 병렬 조회
     const [trendResult] = await Promise.allSettled([
       fetch(`/api/trending?${trendingParams}`).then((r) => r.json()),
       fetchEducation(apiKey, regionCode),
+      fetchAds(apiKey, regionCode),
     ]);
 
     if (trendResult.status === 'fulfilled') {
@@ -102,7 +127,7 @@ export default function Home() {
     }
 
     setLoading(false);
-  }, [apiKey, regionCode, categoryId, fetchCount, fetchEducation]);
+  }, [apiKey, regionCode, categoryId, fetchCount, fetchEducation, fetchAds]);
 
   const handleDownloadCSV = () => {
     if (trendingVideos.length === 0) return;
@@ -261,6 +286,13 @@ export default function Home() {
                 count={educationVideos.length}
                 icon="📚"
               />
+              <TabButton
+                active={activeTab === 'ads'}
+                onClick={() => setActiveTab('ads')}
+                label="최신광고 TOP 30"
+                count={adsVideos.length}
+                icon="📺"
+              />
             </div>
 
             <div className="flex items-center gap-2">
@@ -289,7 +321,7 @@ export default function Home() {
               apiKey={apiKey}
               loading={loading}
             />
-          ) : (
+          ) : activeTab === 'education' ? (
             <EducationTab
               videos={educationVideos}
               meta={educationMeta}
@@ -297,6 +329,16 @@ export default function Home() {
               error={educationError}
               onVideoClick={setModalVideo}
               onRefetch={() => fetchEducation(apiKey, regionCode)}
+              regionCode={regionCode}
+            />
+          ) : (
+            <AdsTab
+              videos={adsVideos}
+              loading={adsLoading}
+              error={adsError}
+              quota={adsQuota}
+              onVideoClick={setModalVideo}
+              onRefetch={() => fetchAds(apiKey, regionCode)}
               regionCode={regionCode}
             />
           )}

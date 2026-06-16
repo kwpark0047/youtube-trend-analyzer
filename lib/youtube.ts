@@ -106,6 +106,35 @@ export async function searchVideosByCategory(
     .filter(Boolean) as string[];
 }
 
+export async function searchVideosByKeyword(
+  apiKey: string,
+  regionCode: string = 'KR',
+  query: string = '광고 CF',
+  maxResults: number = 30,
+  order: 'date' | 'viewCount' | 'relevance' = 'date'
+): Promise<string[]> {
+  const params = new URLSearchParams({
+    part: 'id',
+    type: 'video',
+    q: query,
+    order,
+    regionCode,
+    maxResults: String(Math.min(maxResults, 50)),
+    key: apiKey,
+  });
+
+  const res = await fetch(`${YOUTUBE_API_BASE}/search?${params}`);
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.error?.message || '검색 실패');
+  }
+
+  const data = await res.json();
+  return (data.items || [])
+    .map((item: { id?: { videoId?: string } }) => item.id?.videoId)
+    .filter(Boolean) as string[];
+}
+
 export async function fetchVideosByIds(apiKey: string, ids: string[]): Promise<Video[]> {
   if (ids.length === 0) return [];
 
